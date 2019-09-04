@@ -211,23 +211,22 @@ void SelectSort(Iter _begin, Iter _end)
 	Space Complexity : O(1)
 */
 template <typename Iter>
-void Sift(Iter r, int k, int m)
+void Sift(Iter r, int k, int n)
 {
 	int i = k, j = 2 * i + 1;
-	while (j <= m)
+	while (j < n)
 	{
-		if (j < m && r[j] < r[j + 1])
+		if (j < n && r[j] < r[j + 1])
 			j++;
 		if (r[i] >= r[j])
+		{
 			// Attention : must break here !
 			// otherwise j will not be renewed, resulting in dead-loop!
 			break;
-		else
-		{
-			swap(r[i], r[j]);
-			i = j;
-			j = 2 * i + 1;
 		}
+		swap(r[i], r[j]);
+		i = j;
+		j = 2 * i + 1;
 	}
 }
 template <typename Iter>
@@ -238,13 +237,13 @@ void HeapSort(Iter _begin, Iter _end)
 	if (n < 2)
 		return;
 	// Create heap
-	for (int i = (n - 1) / 2; i >= 0; i--)
-		Sift(r, i, n - 1);
+	for (int i = n / 2; i >= 0; i--)
+		Sift(r, i, n);
 	// Sift the max-element from the heap
 	for (int i = n - 1; i > 0; i--)
 	{
 		swap(r[0], r[i]);
-		Sift(r, 0, i - 1);
+		Sift(r, 0, i);
 	}
 }
 
@@ -281,7 +280,7 @@ void MergeSort(Iter _begin, Iter _end)
 {
 	int n = _end - _begin;
 	int d = 1;
-	while (d < n)
+	for (int d = 1; d < n; d *= 2)
 	{
 		for (int i = 0; i < n; i += 2 * d)
 		{
@@ -290,7 +289,6 @@ void MergeSort(Iter _begin, Iter _end)
 			else if (d <= n - i)
 				Merge(_begin + i, d, _begin + i + d, n - i - d);
 		}
-		d *= 2;
 	}
 }
 template <typename Iter>
