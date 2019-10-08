@@ -6,144 +6,135 @@
 #include <algorithm>
 using namespace std;
 
-void PrintPath(vector<int>& path);
+void PrintPath(vector<int> &path);
 
-vector<vector<int>> __spanning_tree(
-	int root, int block, 
-	vector<vector<int>>& mat, 
-	function<int(int&,int&)> func)
+struct PathNode
+{
+	int cost;
+	int prev;
+};
+
+vector<PathNode> __spanning_tree(
+	int root, const int MAX,
+	vector<vector<int>> &mat,
+	function<int(int, int)> func)
 {
 	int n = mat.size();
-	if(n <= 0 || root < 0 || root >= n)
-		return vector<vector<int>>();
+	if (n <= 0 || root < 0 || root >= n)
+		return {};
 	// Init help data
 	int v = root;
-	vector<bool> flag(n,false);
-	vector<int> cost(n,INT_MAX);
-	vector<int> prev(n,-1);
+	vector<bool> flag(n, false);
+	vector<PathNode> path(n);
 	flag[v] = true;
-	for(int i = 0; i < n; ++i){
-		cost[i] = (mat[v][i] != block) ? mat[v][i] : INT_MAX;
-		prev[i] = (cost[i] != INT_MAX) ? v : -1;
+	for (int i = 0; i < n; ++i)
+	{
+		path[i].cost = mat[v][i];
+		path[i].prev = (mat[v][i] < MAX) ? v : -1;
 	}
-	cost[v] = 0;
-	prev[v] = -1;
+	path[v].cost = 0;
+	path[v].prev = -1;
 	// Update help data
-	for(int i = 0; i < n; ++i){
+	for (int i = 0; i < n; ++i)
+	{
 		// -> Step 1 : find min-cost-node and assign to v
-		int _min = INT_MAX;
-		for(int j = 0; j < n; ++j){
-			if(!flag[j] && _min > cost[j]){
-				_min = cost[j];
+		int _min = MAX;
+		for (int j = 0; j < n; ++j)
+		{
+			if (!flag[j] && _min > path[j].cost)
+			{
+				_min = path[j].cost;
 				v = j;
 			}
 		}
 		// caution : if no valid min, then return, otherwith cost would overflow
-		if(_min == INT_MAX)
-			return {cost,prev};
+		if (_min == MAX)
+			return path;
 		// -> Step 2 : update flag-cost-pre by v
 		flag[v] = true;
-		for(int j = 0; j < n; ++j){
-			if(!flag[j]){
-				int new_cost = (mat[v][j] != block) ? func(cost[v],mat[v][j]) : INT_MAX;
-				if(cost[j] > new_cost){
-					cost[j] = new_cost;
-					prev[j] = v;
+		for (int j = 0; j < n; ++j)
+		{
+			if (!flag[j])
+			{
+				// prim: [](int a, int b) { return b;}
+				// dijstra: [](int a,b) {return a+b};
+				int new_cost = func(path[v].cost, mat[v][j]);
+				if (path[j].cost > new_cost)
+				{
+					path[j].cost = new_cost;
+					path[j].prev = v;
 				}
 			}
 		}
 	}
-	return {cost,prev};
+	return path;
 };
 
-vector<int> __find_path(vector<int>& prev, int src, int dst)
+int Prim(vector<vector<int>> &mat, const int MAX)
 {
-	int n = prev.size();
-	if(n <= 0 || src >= n || src < 0 || dst >= n || dst < 0)
-		return vector<int>();
-
-	int pre = dst;
-	vector<int> path;
-	while(pre != -1 && pre != src){
-		path.push_back(pre);
-		pre = prev[pre];
+	auto spath = __spanning_tree(0, MAX, mat, [](int a, int b) { return b; });
+	int res = 0;
+	for (auto &pnode : spath)
+	{
+		res += (pnode.cost < MAX) ? pnode.cost : 0;
 	}
-	path.push_back(pre);
-	reverse(path.begin(),path.end());
-	return path;
-}
-
-vector<int> FindPath(vector<int>&pre, int src, int dst)
-{
-	auto path1 = __find_path(pre,src,dst);
-	if(path1.empty() || path1[0] == src)
-		return path1; /* father->src->dst */
-	
-	auto path2 = __find_path(pre,dst,src);
-	if(path2.empty() || path2[0] == dst){
-		reverse(path2.begin(),path2.end());
-		return path2; /* father->dst->src */
-	}
-	/* father->dst(path1) + father->src(path2) => src->father->dst */
-	// -> Step1 : find k, k is the idx of the closed father for src and dst
-	int k = 0, len1 = path1.size(), len2 = path2.size();
-	for(; k < len1 && k < len2 && path1[k] == path2[k]; ++k);
-	--k; 
-	// -> Step2 : add src->father and father->dst
-	int j = 0;
-	vector<int> res(len1+len2-2*k-1);
-	for(int i = len2-1; i >= k; res[j++] = path2[i--]);
-	for(int i = k+1; i < len1; res[j++] = path1[i++]);
-
 	return res;
 }
 
-vector<vector<int>> Prim(vector<vector<int>>& mat, int block, int src=0)
+vector<PathNode> Dijstra(vector<vector<int>> &mat, int src, int MAX)
 {
-	return __spanning_tree(src,block,mat,[](int& a,int& b){return b;});
-}
-
-vector<vector<int>> Dijstra(vector<vector<int>>& mat, int src, int block)
-{
-	return __spanning_tree(src,block,mat,[](int& a,int& b){return a+b;});
+	return __spanning_tree(src, MAX, mat, [](int a, int b) { return a + b; });
 };
 
-void PrintMatrix(string name,vector<vector<int>>& mat)
+vector<int> __find_path(vector<PathNode> &spath, int src, int dst)
 {
-	cout << name << " <cost,prev>" << endl;
-	for(auto& v : mat){
-		for(auto& x : v)
-			cout << x << " ";
-		cout << endl;
+	int n = spath.size();
+	if (n <= 0 || src >= n || src < 0 || dst >= n || dst < 0)
+		return {};
+
+	int pre = dst;
+	vector<int> path;
+	while (pre != -1 && pre != src)
+	{
+		path.push_back(pre);
+		pre = spath[pre].prev;
 	}
+	path.push_back(pre);
+	reverse(path.begin(), path.end());
+	return path;
 }
 
-void PrintPath(vector<int>& path)
+void PrintPath(vector<int> &path)
 {
-	for(auto& x : path)
+	for (auto &x : path)
 		cout << x << "->";
 	cout << "end" << endl;
 }
 
-int main(int argc,char *argv[])
+int main(int argc, char *argv[])
 {
+	const int MAX = 1000000;
+	/*
+		0--(10)--1
+		|		 |
+	   (5)		(5)
+		|		 |
+		3--(5)---2
+	*/
 	vector<vector<int>> mat = {
-		//0--1--2--3  
-		{ 0,10,-1, 5}, // 0
-		{10, 0, 5,-1}, // 1
-		{-1, 5, 0, 5}, // 2
-		{ 5,-1, 5, 0}, // 3
+		//0--1--2--3
+		{0, 10, MAX, 5}, // 0
+		{10, 0, 5, MAX}, // 1
+		{MAX, 5, 0, 5},  // 2
+		{5, MAX, 5, 0},  // 3
 	};
 
-	auto res = Prim(mat,-1);
-	PrintMatrix("Prim",res);
-	auto path = FindPath(res[1],1,0);
-	PrintPath(path);
+	cout << Prim(mat, MAX) << endl;
 
-	res = Dijstra(mat,0,-1);
-	PrintMatrix("Dijstra",res);
-	path = FindPath(res[1],2,1);
+	auto res = Dijstra(mat, 0, MAX);
+	auto path = __find_path(res, 0, 1);
 	PrintPath(path);
+	cout << res[1].cost << endl;
 
- 	return 0;
+	return 0;
 }

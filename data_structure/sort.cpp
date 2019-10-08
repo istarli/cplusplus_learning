@@ -63,7 +63,7 @@ void ShellSort(Iter _begin, Iter _end)
 	}
 }
 
-/*
+/* 
 	Simple Bubble Sort.
 */
 template <typename Iter>
@@ -189,7 +189,7 @@ void SelectSort(Iter _begin, Iter _end)
 	Iter r = _begin;
 	for (int i = 0; i < n; i++)
 	{
-		int minIdx = 0;
+		int minIdx = i;
 		for (int j = i + 1; j < n; j++)
 		{
 			if (r[minIdx] > r[j])
@@ -237,10 +237,10 @@ void HeapSort(Iter _begin, Iter _end)
 	if (n < 2)
 		return;
 	// Create heap
-	for (int i = n / 2; i >= 0; i--)
+	for (int i = n / 2; i >= 0; --i)
 		Sift(r, i, n);
 	// Sift the max-element from the heap
-	for (int i = n - 1; i > 0; i--)
+	for (int i = n - 1; i > 0; --i)
 	{
 		swap(r[0], r[i]);
 		Sift(r, 0, i);
@@ -279,14 +279,13 @@ template <typename Iter>
 void MergeSort(Iter _begin, Iter _end)
 {
 	int n = _end - _begin;
-	int d = 1;
 	for (int d = 1; d < n; d *= 2)
 	{
 		for (int i = 0; i < n; i += 2 * d)
 		{
-			if (2 * d <= n - i)
+			if (n - i >= 2 * d) // n-i is the remained length
 				Merge(_begin + i, d, _begin + i + d, d);
-			else if (d <= n - i)
+			else if (n - i >= d)
 				Merge(_begin + i, d, _begin + i + d, n - i - d);
 		}
 	}
